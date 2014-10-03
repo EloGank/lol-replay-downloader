@@ -1,0 +1,28 @@
+{
+   "name": "elogank/lol-commands-replay",
+   "description": "League of Legends replay command management",
+   "keywords": ["lol", "command", "league of legends", "dump", "replay", "match", "record"],
+   "licence": "MIT",
+   "authors": [
+       {
+           "name": "Sylvain Lorinet",
+           "email": "sylvain.lorinet@gmail.com"
+       }
+    ],
+    "require": {
+        "php": ">=5.4.0",
+        "symfony/console": "2.5.5",
+        "elogank/lol-commands": "1.0.*@dev"
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-master": "1.0-dev"
+        }
+    },
+    "autoload": {
+        "psr-0": {
+            "EloGank\\Util": "src/"
+        }
+    },
+    "minimum-stability": "dev"
+}
