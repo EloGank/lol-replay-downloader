@@ -1,15 +1,15 @@
-League of Legends Replay Command
+League of Legends Replay Downloader Library
 ============
 
 ### Currently in dev.
 
 ## Reporting an issue or a feature request
 
-Feel free to open an issue, fork this project or suggest an awesome new feature in the [issue tracker](https://github.com/EloGank/lol-commands-replay/issues).  
+Feel free to open an issue, fork this project or suggest an awesome new feature in the [issue tracker](https://github.com/EloGank/lol-replay-downloader/issues).  
 
 ## Credit
 
-See the list of [contributors](https://github.com/EloGank/lol-commands-replay/graphs/contributors).
+See the list of [contributors](https://github.com/EloGank/lol-replay-downloader/graphs/contributors).
 
 ## Licence
 

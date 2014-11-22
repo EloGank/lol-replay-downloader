@@ -1,7 +1,7 @@
 {
-   "name": "elogank/lol-commands-replay",
-   "description": "League of Legends replay command management",
-   "keywords": ["lol", "command", "league of legends", "dump", "replay", "match", "record"],
+   "name": "elogank/lol-replay-downloader",
+   "description": "League of Legends replay downloader library",
+   "keywords": ["lol", "library", "league of legends", "replay", "match", "record", "spectator"],
    "licence": "MIT",
    "authors": [
        {
@@ -10,9 +10,7 @@
        }
     ],
     "require": {
-        "php": ">=5.4.0",
-        "symfony/console": "2.5.5",
-        "elogank/lol-commands": "1.0.*@dev"
+        "php": ">=5.4.0"
     },
     "extra": {
         "branch-alias": {
@@ -21,8 +19,7 @@
     },
     "autoload": {
         "psr-0": {
-            "EloGank\\Util": "src/"
+            "EloGank\\Replay": "src/"
         }
-    },
-    "minimum-stability": "dev"
+    }
 }
