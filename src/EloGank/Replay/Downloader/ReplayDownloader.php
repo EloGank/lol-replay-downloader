@@ -18,17 +18,16 @@ use EloGank\Replay\Downloader\Exception\GameNotFoundException;
 use EloGank\Replay\Downloader\Exception\GameNotStartedException;
 use EloGank\Replay\Downloader\Exception\ReplayFolderAlreadyExistsException;
 use EloGank\Replay\Replay;
-use Symfony\Component\Console\Output\OutputInterface;
+use EloGank\Replay\Output\OutputInterface;
+use EloGank\Replay\ReplayInterface;
 
 /**
  * @author Sylvain Lorinet <sylvain.lorinet@gmail.com>
- *
- * TODO delete OutputInterface dependancy
  */
 class ReplayDownloader
 {
-    const FILETYPE_KEYFRAME = 'KEYFRAME';
-    const FILETYPE_CHUNK    = 'CHUNK';
+    const FILETYPE_KEYFRAME = 0;
+    const FILETYPE_CHUNK    = 1;
 
     /**
      * @var string
@@ -53,8 +52,8 @@ class ReplayDownloader
      */
     public function __construct(ReplayClient $client, $path, array $options = [])
     {
-        $this->client = $client;
-        $this->path = $path;
+        $this->client  = $client;
+        $this->path    = $path;
         $this->options = array_merge($this->getDefaultOptions(), $options);
     }
 
@@ -91,13 +90,18 @@ class ReplayDownloader
      * @param int    $gameId
      * @param string $encryptionKey
      *
-     * @return Replay
+     * @return ReplayInterface
      */
     public function createReplay($region, $gameId, $encryptionKey)
     {
-        // TODO make Replay class config
+        $className = $this->options['replay.class'];
+        $replay = new $className($region, $gameId, $encryptionKey);
 
-        return new Replay($region, $gameId, $encryptionKey);
+        if (!$replay instanceof ReplayInterface) {
+            throw new \RuntimeException('The class ' . $className . ' is not a valid class. It should implement \EloGank\Replay\ReplayInterface');
+        }
+
+        return $replay;
     }
 
     /**
@@ -127,15 +131,15 @@ class ReplayDownloader
     }
 
     /**
-     * @param Replay $replay
-     * @param int    $tries
+     * @param ReplayInterface $replay
+     * @param int             $tries
      *
      * @return bool
      *
      * @throws GameEndedException
      * @throws GameNotStartedException
      */
-    public function isValid(Replay $replay, $tries = 0)
+    public function isValid(ReplayInterface $replay, $tries = 0)
     {
         if (null == $replay->getMetas()) {
             throw new \RuntimeException('You must call downloadMetas() method first');
@@ -169,11 +173,11 @@ class ReplayDownloader
     }
 
     /**
-     * @param Replay $replay
+     * @param ReplayInterface $replay
      *
-     * @return mixed
+     * @return array
      */
-    public function downloadMetas(Replay $replay)
+    public function downloadMetas(ReplayInterface $replay)
     {
         $gameId = $replay->getGameId();
         $metas = $this->client->getMetas($replay->getRegion(), $gameId);
@@ -187,24 +191,24 @@ class ReplayDownloader
     }
 
     /**
-     * @param Replay $replay
+     * @param ReplayInterface $replay
      */
-    public function saveMetas(Replay $replay)
+    public function saveMetas(ReplayInterface $replay)
     {
         // Save the file
         file_put_contents($this->getReplayDirPath($replay->getRegion(), $replay->getGameId()) . '/metas.json', json_encode($replay->getMetas()));
     }
 
     /**
-     * @param Replay $replay
-     * @param int    $chunkId
-     * @param int    $tries
+     * @param ReplayInterface $replay
+     * @param int             $chunkId
+     * @param int             $tries
      *
      * @return mixed
      *
      * @throws GameNotStartedException
      */
-    public function getLastChunkInfos(Replay $replay, $chunkId = 30000, $tries = 0)
+    public function getLastChunkInfos(ReplayInterface $replay, $chunkId = 30000, $tries = 0)
     {
         $lastInfos = json_decode($this->client->getLastChunkInfo($replay->getRegion(), $replay->getGameId(), $chunkId), true);
         if (0 === $lastInfos['chunkId']) {
@@ -222,9 +226,9 @@ class ReplayDownloader
 
 
     /**
-     * @param Replay $replay
+     * @param ReplayInterface $replay
      */
-    public function downloadChunks(Replay $replay)
+    public function downloadChunks(ReplayInterface $replay)
     {
         // Clear last chunks info
         $metas = $replay->getMetas();
@@ -237,10 +241,10 @@ class ReplayDownloader
     }
 
     /**
-     * @param Replay          $replay
+     * @param ReplayInterface $replay
      * @param OutputInterface $output
      */
-    public function downloadKeyframes(Replay $replay, OutputInterface $output)
+    public function downloadKeyframes(ReplayInterface $replay, OutputInterface $output)
     {
         // Clear last keyframes info
         $metas = $replay->getMetas();
@@ -254,20 +258,19 @@ class ReplayDownloader
 
 
     /**
-     * @param Replay $replay
-     * @param int    $chunkId
+     * @param ReplayInterface $replay
+     * @param int             $chunkId
      *
      * @return bool
      */
-    private function downloadChunk(Replay $replay, $chunkId)
+    private function downloadChunk(ReplayInterface $replay, $chunkId)
     {
         $chunk = $this->client->downloadChunk($replay->getRegion(), $replay->getGameId(), $chunkId);
         if (false === $chunk) {
             try {
                 if ($chunkId > $this->findFirstChunkId($replay->getMetas()) && isset($replay->getMetas()['pendingAvailableChunkInfo'][0])) {
                     $replay->addDownloadRetry();
-                    // TODO make config
-                    if (15 == $replay->getDownloadRetry()) {
+                    if ($this->options['replay.download.retry'] == $replay->getDownloadRetry()) {
                         return false;
                     }
                     else {
@@ -287,7 +290,8 @@ class ReplayDownloader
             return false;
         }
 
-        file_put_contents($this->getReplayDirPath($replay->getRegion(), $replay->getGameId()) . '/chunks/' . $chunkId, $chunk);
+        $pathFolder = $this->getReplayDirPath($replay->getRegion(), $replay->getGameId()) . '/chunks';
+        file_put_contents($pathFolder . '/' . $chunkId, $chunk);
 
         // Update metas
         $metas = $replay->getMetas();
@@ -298,25 +302,34 @@ class ReplayDownloader
         );
         $replay->setMetas($metas);
 
+        if ($this->options['replay.decoder.enable']) {
+            $crypt = new ReplayCrypt($replay);
+
+            if (!$this->onReplayFileDecrypted($replay, self::FILETYPE_CHUNK, $chunkId,
+                $crypt->getBinary($replay, $pathFolder, $chunkId, $this->options['replay.decoder.save_files'])
+            )) {
+                return false;
+            }
+        }
+
         return true;
     }
 
     /**
-     * @param Replay          $replay
+     * @param ReplayInterface $replay
      * @param int             $keyframeId
-     * @param OutputInterface $output
      *
      * @return bool
      */
-    private function downloadKeyframe(Replay $replay, $keyframeId, OutputInterface $output)
+    private function downloadKeyframe(ReplayInterface $replay, $keyframeId)
     {
         $keyframe = $this->client->downloadKeyframe($replay->getRegion(), $replay->getGameId(), $keyframeId);
         if (false === $keyframe) {
             try {
-                if ($keyframeId > $this->findKeyframeByChunkId($replay->getMetas(), $this->findFirstChunkId($replay->getMetas())) && isset($replay->getMetas()['pendingAvailableKeyFrameInfo'][0])) {
+                if ($keyframeId > $this->findKeyframeByChunkId($replay->getMetas(), $this->findFirstChunkId($replay->getMetas())) &&
+                    isset($replay->getMetas()['pendingAvailableKeyFrameInfo'][0])) {
                     $replay->addDownloadRetry();
-                    // TODO make config
-                    if (15 == $replay->getDownloadRetry()) {
+                    if ($this->options['replay.download.retry'] == $replay->getDownloadRetry()) {
                         return false;
                     }
                     else {
@@ -352,7 +365,7 @@ class ReplayDownloader
             $crypt = new ReplayCrypt($replay);
 
             if (!$this->onReplayFileDecrypted($replay, self::FILETYPE_KEYFRAME, $keyframeId,
-                $crypt->getBinary($replay, $pathFolder, $keyframeId, false)  // TODO make "false" as option
+                $crypt->getBinary($replay, $pathFolder, $keyframeId, $this->options['replay.decoder.save_files'])
             )) {
                 return false;
             }
@@ -362,14 +375,14 @@ class ReplayDownloader
     }
 
     /**
-     * @param Replay $replay   The replay
-     * @param string $fileType Will be self::FILETYPE_KEYFRAME or self::FILETYPE_CHUNK
-     * @param int    $fileId   The file id (which is the filename)
-     * @param string $binary   The decrypted file binary
+     * @param ReplayInterface $replay   The replay
+     * @param string          $fileType Will be self::FILETYPE_KEYFRAME or self::FILETYPE_CHUNK
+     * @param int             $fileId   The file id (which is the filename)
+     * @param string          $binary   The decrypted file binary
      *
      * @return bool True if success, false otherwise.
      */
-    protected function onReplayFileDecrypted(Replay $replay, $fileType, $fileId, $binary)
+    protected function onReplayFileDecrypted(ReplayInterface $replay, $fileType, $fileId, $binary)
     {
         // If you have to parse a decrypted file, do it here.
 
@@ -377,23 +390,14 @@ class ReplayDownloader
     }
 
     /**
-     * @param Replay          $replay
+     * @param ReplayInterface $replay
      * @param OutputInterface $output
      *
      * @return bool
      */
-    public function downloadCurrentData(Replay $replay, OutputInterface $output)
+    public function downloadCurrentData(ReplayInterface $replay, OutputInterface $output)
     {
         $lastInfos = $this->getLastChunkInfos($replay, $replay->getLastChunkId());
-
-        // End stats
-        // TODO put in config this code, it download the last keyframe, but not needed now
-        if ($lastInfos['endGameChunkId'] == $replay->getLastChunkId()) {
-            $this->downloadKeyframe($replay, $replay->getLastKeyframeId(), true, $output);
-
-            return true;
-        }
-
         $downloadableChunkId = $replay->getLastChunkId() + 1;
         $output->write("Downloading chunk\t#" . $downloadableChunkId . "\t\t");
         $this->downloadChunk($replay, $downloadableChunkId);
@@ -423,9 +427,9 @@ class ReplayDownloader
     }
 
     /**
-     * @param Replay $replay
+     * @param ReplayInterface $replay
      */
-    public function updateMetas(Replay $replay)
+    public function updateMetas(ReplayInterface $replay)
     {
         // Download end game metas
         $endMetas = $this->client->getMetas($replay->getRegion(), $replay->getGameId());
@@ -552,10 +556,12 @@ class ReplayDownloader
     protected function getDefaultOptions()
     {
         return [
-            'php.executable_path' => 'php',
+            'php.executable_path'           => 'php',
             'elogank.commands.console_path' => '',
-            'replay.decoder.enable' => true,
-            'replay.decoder.save_files' => true
+            'replay.class'                  => '\EloGank\Replay\Replay',
+            'replay.decoder.enable'         => true,
+            'replay.decoder.save_files'     => true,
+            'replay.download.retry'         => 15,
         ];
     }
 } 

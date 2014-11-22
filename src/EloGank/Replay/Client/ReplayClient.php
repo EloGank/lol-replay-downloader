@@ -132,7 +132,8 @@ class ReplayClient
         }
 
         // Check if game exists
-        if ('HTTP/1.1 500 Internal Server Error' == $chunk->getHeaders()[0]) {
+        $header = $chunk->getHeaders()[0];
+        if ('HTTP/1.1 500 Internal Server Error' == $header || 'HTTP/1.1 404 Not Found' == $header) {
             return false;
         }
 
@@ -156,7 +157,8 @@ class ReplayClient
         }
 
         // Check if game exists
-        if ('HTTP/1.1 500 Internal Server Error' == $keyframe->getHeaders()[0]) {
+        $header = $keyframe->getHeaders()[0];
+        if ('HTTP/1.1 500 Internal Server Error' == $header || 'HTTP/1.1 404 Not Found' == $header) {
             return false;
         }
 

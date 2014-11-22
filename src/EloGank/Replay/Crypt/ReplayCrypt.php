@@ -11,7 +11,7 @@
 
 namespace EloGank\Replay\Crypt;
 
-use EloGank\Replay\Replay;
+use EloGank\Replay\ReplayInterface;
 
 /**
  * @author Sylvain Lorinet <sylvain.lorinet@gmail.com>
@@ -19,28 +19,28 @@ use EloGank\Replay\Replay;
 class ReplayCrypt
 {
     /**
-     * @var Replay
+     * @var ReplayInterface
      */
     protected $replay;
 
 
     /**
-     * @param Replay $replay
+     * @param ReplayInterface $replay
      */
-    public function __construct(Replay $replay)
+    public function __construct(ReplayInterface $replay)
     {
         $this->replay = $replay;
     }
 
     /**
-     * @param Replay $replay
-     * @param string $pathFolder
-     * @param int    $fileId
-     * @param bool   $saveFile
+     * @param ReplayInterface $replay
+     * @param string          $pathFolder
+     * @param int             $fileId
+     * @param bool            $saveFile
      *
      * @return string
      */
-    public function getBinary(Replay $replay, $pathFolder, $fileId, $saveFile = false)
+    public function getBinary(ReplayInterface $replay, $pathFolder, $fileId, $saveFile = false)
     {
         $path = $pathFolder . '/' . $fileId;
         if (!is_file($path)) {

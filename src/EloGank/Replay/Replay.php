@@ -14,7 +14,7 @@ namespace EloGank\Replay;
 /**
  * @author Sylvain Lorinet <sylvain.lorinet@gmail.com>
  */
-class Replay
+class Replay implements ReplayInterface
 {
     /**
      * @var array
@@ -80,7 +80,7 @@ class Replay
     /**
      * @param array $metas
      */
-    public function setMetas($metas)
+    public function setMetas(array $metas)
     {
         $this->metas = $metas;
     }
