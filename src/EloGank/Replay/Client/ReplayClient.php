@@ -56,11 +56,13 @@ class ReplayClient
     public function __construct(array $options = [])
     {
         $this->options = array_merge($this->getDefaultOptions(), $options);
-        $this->buzz    = $this->options['buzz.browser'];
-        $this->servers = $this->options['replay.client.servers'];
+
+        $buzzClassName = $this->options['buzz.class'];
+        $this->buzz    = new $buzzClassName();
+        $this->servers = $this->options['replay.http_client.servers'];
 
         // Increase timeout
-        $this->buzz->getClient()->setTimeout($this->options['buzz.browser.timeout']);
+        $this->buzz->getClient()->setTimeout($this->options['buzz.timeout']);
     }
 
     /**
@@ -224,9 +226,9 @@ class ReplayClient
     protected function getDefaultOptions()
     {
         return [
-            'buzz.browser' => new Browser(),
-            'buzz.browser.timeout' => 10,
-            'replay.client.servers' => [
+            'buzz.class'   => '\Browser\Buzz',
+            'buzz.timeout' => 10,
+            'replay.http_client.servers' => [
                 'EUW1' => '185.40.64.163:80',
                 'NA1'  => '216.133.234.17:8088',
                 'KR'   => '110.45.191.11:8088',

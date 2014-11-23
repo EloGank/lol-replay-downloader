@@ -58,16 +58,21 @@ class ReplayDownloader
     }
 
     /**
+     * Download a replay asynchronously.
+     * The async method require this dependency : https://github.com/EloGank/lol-replay-downloader-cli
+     *
      * @param string $region
      * @param int    $gameId
-     * @param bool   $isAsync
      * @param string $encryptionKey
+     * @param string $consolePath   The absolute path to the "console" file in the dependency folder
+     * @param bool   $isAsync
+     * @param bool   $isOverride    If the replay folder already exists, override it (causes loss of previous files !)
      *
      * @return Replay
      *
      * @throws GameNotFoundException
      */
-    public function download($region, $gameId, $isAsync = false, $encryptionKey)
+    public function download($region, $gameId, $encryptionKey, $consolePath, $isAsync = false, $isOverride = false)
     {
         // Check if exists
         if (!$this->client->isGameExists($region, $gameId)) {
@@ -75,11 +80,24 @@ class ReplayDownloader
         }
 
         // Create directories
-        $this->createDirs($region, $gameId);
+        if ($isOverride) {
+            if (!is_dir($this->getReplayDirPath($region, $gameId))) {
+                $this->createDirs($region, $gameId);
+            }
+        }
+        else {
+            $this->createDirs($region, $gameId);
+        }
 
         // Async
         if ($isAsync) {
-            pclose(popen(sprintf('%s ' . $this->path . 'console replay:download %s %d %s --override > %s/info.log 2>&1 & echo $!', $this->options['php.executable_path'], $region, $gameId, $encryptionKey, $this->getReplayDirPath($region, $gameId)), 'r'));
+            if (!class_exists('\EloGank\Replay\Command\ReplayDownloadCommand')) {
+                throw new \RuntimeException('The dependency to run the async download is missing. Please, see : https://github.com/EloGank/lol-replay-downloader-cli');
+            }
+
+            $replayFolder = $this->getReplayDirPath($region, $gameId);
+
+            return pclose(popen(sprintf('%s %s/console elogank:replay:download %s %d %s --override 2>&1 & echo $! > %s/pid', $this->options['php.executable_path'], $consolePath, $region, $gameId, $encryptionKey, $replayFolder, $replayFolder), 'r'));
         }
 
         return $this->createReplay($region, $gameId, $encryptionKey);
@@ -557,10 +575,9 @@ class ReplayDownloader
     {
         return [
             'php.executable_path'           => 'php',
-            'elogank.commands.console_path' => '',
             'replay.class'                  => '\EloGank\Replay\Replay',
-            'replay.decoder.enable'         => true,
-            'replay.decoder.save_files'     => true,
+            'replay.decoder.enable'         => false,
+            'replay.decoder.save_files'     => false,
             'replay.download.retry'         => 15,
         ];
     }
