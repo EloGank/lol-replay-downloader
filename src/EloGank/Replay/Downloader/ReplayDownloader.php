@@ -150,6 +150,7 @@ class ReplayDownloader
 
     /**
      * @param ReplayInterface $replay
+     * @param OutputInterface $output
      * @param int             $tries
      *
      * @return bool
@@ -157,7 +158,7 @@ class ReplayDownloader
      * @throws GameEndedException
      * @throws GameNotStartedException
      */
-    public function isValid(ReplayInterface $replay, $tries = 0)
+    public function isValid(ReplayInterface $replay, OutputInterface $output, $tries = 0)
     {
         if (null == $replay->getMetas()) {
             throw new \RuntimeException('You must call downloadMetas() method first');
@@ -171,8 +172,15 @@ class ReplayDownloader
             $metas = $replay->getMetas();
         }
 
+        $size = sizeof($metas);
+
         // Retries
-        if (!isset($metas['pendingAvailableKeyFrameInfo'][0])) {
+        if (1 < $size && !isset($metas['pendingAvailableKeyFrameInfo'][0])) {
+            if (0 === $tries) {
+                $output->writeln('<comment>Game not started</comment>');
+                $output->write("Waiting for the ingame ~3rd minute...\t");
+            }
+
             if ($tries < 20) {
                 sleep(30);
                 ++$tries;
@@ -180,10 +188,14 @@ class ReplayDownloader
                 return $this->isValid($replay, $tries);
             }
 
+            $output->write('<error>FAILURE</error>');
+
             throw new GameNotStartedException('The game is not yet available for spectator, please wait tree minutes');
         }
 
-        if ($metas['gameEnded']) {
+        if (1 == $size && isset($metas['encryptionKey']) || $metas['gameEnded']) {
+            $output->write('<error>FAILURE</error>');
+
             throw new GameEndedException('The game has already ended, cannot download it');
         }
 
@@ -420,14 +432,14 @@ class ReplayDownloader
         $output->write("Downloading chunk\t#" . $downloadableChunkId . "\t\t");
         $this->downloadChunk($replay, $downloadableChunkId);
         $replay->setLastChunkId($downloadableChunkId);
-        $output->writeln('OK');
+        $output->writeln('<info>OK</info>');
 
         if ($lastInfos['keyFrameId'] > $replay->getLastKeyframeId()) {
             $downloadableKeyframeId = $replay->getLastKeyframeId() + 1;
             $output->write("Downloading keyframe\t#" . $downloadableKeyframeId . "\t\t");
             $this->downloadKeyframe($replay, $downloadableKeyframeId, $output);
             $replay->setLastKeyframeId($downloadableKeyframeId);
-            $output->writeln('OK');
+            $output->writeln('<info>OK</info>');
         }
 
         // Downloading all chunks & keyframes might slow the current chunk
@@ -438,6 +450,7 @@ class ReplayDownloader
         // Wait for the next available chunk
         usleep(($lastInfos['nextAvailableChunk'] + 500) * 1000); // micro, not milli
 
+        // Free memory to avoid memory leak
         gc_collect_cycles();
 
         // And again
