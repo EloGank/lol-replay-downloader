@@ -428,6 +428,12 @@ class ReplayDownloader
     public function downloadCurrentData(ReplayInterface $replay, OutputInterface $output)
     {
         $lastInfos = $this->getLastChunkInfos($replay, $replay->getLastChunkId());
+
+        // End stats
+        if ($lastInfos['endGameChunkId'] == $replay->getLastChunkId()) {
+            return true;
+        }
+
         $downloadableChunkId = $replay->getLastChunkId() + 1;
         $output->write("Downloading chunk\t#" . $downloadableChunkId . "\t\t");
         $this->downloadChunk($replay, $downloadableChunkId);
