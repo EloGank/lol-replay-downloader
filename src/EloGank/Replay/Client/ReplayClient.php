@@ -226,7 +226,7 @@ class ReplayClient
     protected function getDefaultOptions()
     {
         return [
-            'buzz.class'   => '\Browser\Buzz',
+            'buzz.class'   => '\Buzz\Browser',
             'buzz.timeout' => 10,
             'replay.http_client.servers' => [
                 'EUW1' => '185.40.64.163:80',
