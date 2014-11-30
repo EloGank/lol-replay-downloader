@@ -41,6 +41,10 @@ try {
 // Downloading process
 $output->writeln(['', 'Replay downlading process for #' . $parser->getGameId() . ' (' . $parser->getRegion() . ') :']);
 $replayDownloader = new ReplayDownloader(new ReplayClient(), __DIR__ . '/replays', [
+    // ##################################################################
+    // Here, we tell to ReplayDownloader to decode and save decoded files
+    // into chunks.decoded & keyframes.decoded folders
+    // ##################################################################
     'replay.decoder.enable'     => true,
     'replay.decoder.save_files' => true
 ]);
