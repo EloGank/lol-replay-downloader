@@ -22,12 +22,12 @@ class LoLNexusParser
     const REGION_NA   = 1;
     const REGION_EUW  = 2;
     const REGION_EUNE = 3;
-    const REGION_BRA  = 4;
+    const REGION_BR   = 4;
     const REGION_TR   = 5;
     const REGION_RU   = 6;
-    const REGION_LA1  = 7;
-    const REGION_LA2  = 8;
-    const REGION_OC   = 9;
+    const REGION_LAN  = 7;
+    const REGION_LAS  = 8;
+    const REGION_OCE  = 9;
 
     /**
      * @var string
@@ -44,12 +44,18 @@ class LoLNexusParser
      */
     protected $encryptionKey;
 
+    protected static $serverNames = [
+        'NA', 'EUW', 'EUNE', 'BR', 'TR', 'RU', 'LAN', 'LAS', 'OCE'
+    ];
+
 
     /**
+     * Select the first player in the recent games list for a selected region
+     *
      * @param int             $regionId
      * @param OutputInterface $output
      */
-    public function parse($regionId = self::REGION_EUW, OutputInterface $output = null)
+    public function parseRandom($regionId = self::REGION_EUW, OutputInterface $output = null)
     {
         $hasOutput = null != $output;
         if ($hasOutput) {
@@ -59,19 +65,38 @@ class LoLNexusParser
         $buzz = new Browser();
         $response = $buzz->get('http://www.lolnexus.com/recent-games?filter-region=' . $regionId . '&filter-sort=1');
 
-        if (!preg_match('/<a class="green-button scouter-button" href="\/EUW\/search\?name=(.*)">Live Game<\/a>/', $response->getContent(), $matches)) {
+        if (!preg_match('/<a class="green-button scouter-button" href="\/' . self::$serverNames[$regionId - 1] . '\/search\?name=(.*)">Live Game<\/a>/', $response->getContent(), $matches)) {
             throw new \RuntimeException('Cannot parse LoL Nexus website, maybe down ?');
         }
 
         if ($hasOutput) {
             $output->writeln('<info>OK</info>');
+        }
+
+        $this->parsePlayer($regionId, $matches[1], $output, $buzz);
+    }
+
+    /**
+     * @param int                  $regionId
+     * @param string               $playerName
+     * @param null|OutputInterface $output
+     * @param null|Browser         $buzz
+     */
+    public function parsePlayer($regionId, $playerName, OutputInterface $output = null, $buzz = null)
+    {
+        if (null == $buzz) {
+            $buzz = new Browser();
+        }
+
+        $hasOutput = null != $output;
+        if ($hasOutput) {
             $output->write("Parsing game page...\t\t\t");
         }
 
-        $response = $buzz->get('http://www.lolnexus.com/ajax/get-game-info/EUW.json?name=' . urlencode($matches[1]));
+        $response = $buzz->get('http://www.lolnexus.com/ajax/get-game-info/' . self::$serverNames[$regionId - 1] . '.json?name=' . urlencode($playerName));
 
         if (!preg_match('/lrf:\/\/spectator [0-9.:]+ (.*) ([0-9]+) ([A-Z0-9]+) [0-9\.]+/', $response->getContent(), $matches)) {
-            throw new \RuntimeException('Cannot parse LoL Nexus game page, the game may be ended, please retry.');
+            throw new \RuntimeException('Cannot parse LoL Nexus game page, the game may be ended (sometimes LoLNexus\'s cache is bad), please retry.');
         }
 
         if ($hasOutput) {
@@ -80,7 +105,7 @@ class LoLNexusParser
 
         $this->encryptionKey    = $matches[1];
         $this->gameId           = $matches[2];
-        $this->region = $matches[3];
+        $this->region           = $matches[3];
     }
 
     /**

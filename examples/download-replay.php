@@ -17,8 +17,8 @@ use EloGank\Replay\Downloader\ReplayDownloader;
 use Example\Utils\BasicOutput;
 use Example\Utils\LoLNexusParser;
 
-require __DIR__ . '/../vendor/autoload.php';
-// require __DIR__ . '/../../../../vendor/autoload.php'; // if running example from the CLI project
+// require __DIR__ . '/../vendor/autoload.php';
+require __DIR__ . '/../../../../vendor/autoload.php'; // if running example from the CLI project
 require __DIR__ . '/utils/BasicOutput.php';
 require __DIR__ . '/utils/LoLNexusParser.php';
 
@@ -29,7 +29,7 @@ $output->writeln('Parsing LoLNexus content to retrieve a random game data :');
 $parser = new LoLNexusParser();
 
 try {
-    $parser->parse(LoLNexusParser::REGION_EUW, $output);
+    $parser->parseRandom(LoLNexusParser::REGION_EUW, $output);
 } catch (\RuntimeException $e) {
     $output->writeln([
         '',
