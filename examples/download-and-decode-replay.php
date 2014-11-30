@@ -40,7 +40,10 @@ try {
 
 // Downloading process
 $output->writeln(['', 'Replay downlading process for #' . $parser->getGameId() . ' (' . $parser->getRegion() . ') :']);
-$replayDownloader = new ReplayDownloader(new ReplayClient(), __DIR__ . '/replays');
+$replayDownloader = new ReplayDownloader(new ReplayClient(), __DIR__ . '/replays', [
+    'replay.decoder.enable'     => true,
+    'replay.decoder.save_files' => true
+]);
 $replayDownloader->download($parser->getRegion(), $parser->getGameId(), $parser->getEncryptionKey(), $output, true);
 
 $output->writeln([
