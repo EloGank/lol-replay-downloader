@@ -1,38 +1,48 @@
 <?php
 
+/*
+ * This file is part of the "EloGank League of Legends Replay Downloader" package.
+ *
+ * https://github.com/EloGank/lol-replay-downloader
+ *
+ * For the full license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+
 namespace Example;
 
-use Buzz\Browser;
 use EloGank\Replay\Client\ReplayClient;
 use EloGank\Replay\Downloader\ReplayDownloader;
 use Example\Utils\BasicOutput;
+use Example\Utils\LoLNexusParser;
 
-require __DIR__ . '/../../../../vendor/autoload.php';
-require __DIR__ . '/Utils/BasicOutput.php';
+require __DIR__ . '/../vendor/autoload.php';
+// require __DIR__ . '/../../../../vendor/autoload.php';
+require __DIR__ . '/utils/BasicOutput.php';
+require __DIR__ . '/utils/LoLNexusParser.php';
 
 $output = new BasicOutput();
 
-$output->write('Parsing LoLNexus content to retrieve encryption key & game id...');
+// Parsing process
+$output->writeln('Parsing LoLNexus content to retrieve a random game data...');
+$parser = new LoLNexusParser();
 
-$buzz = new Browser();
-$response = $buzz->get('http://www.lolnexus.com/recent-games?filter-region=2&filter-sort=1');
-$output->write('.');
+try {
+    $parser->parse(LoLNexusParser::REGION_EUW, $output);
+} catch (\RuntimeException $e) {
+    $output->writeln([
+        '',
+        'ERROR: ' . $e->getMessage()
+    ]);
 
-if (!preg_match('/<a class="green-button scouter-button" href="\/EUW\/search\?name=(.*)">Live Game<\/a>/', $response->getContent(), $matches)) {
-    die('Cannot parse LoLNexus website #1');
+    die;
 }
 
-$output->write('.');
-$response = $buzz->get('http://www.lolnexus.com/ajax/get-game-info/EUW.json?name=' . $matches[1]);
-
-if (!preg_match('/lrf:\/\/spectator [0-9.:]+ (.*) ([0-9]+) EUW/', $response->getContent(), $matches)) {
-    die('Cannot parse LoLNexus website #2');
-}
-
-$output->writeln('.');
-
+// Downloading process
+$output->writeln(['', 'Replay downlading process :']);
 $replayDownloader = new ReplayDownloader(new ReplayClient(), __DIR__ . '/replays');
-$replay = $replayDownloader->createReplay('EUW1', $matches[2], $matches[1]);
+$replay = $replayDownloader->createReplay($parser->getRegionUniqueName(), $parser->getGameId(), $parser->getEncryptionKey());
 $replayDownloader->createDirs($replay->getRegion(), $replay->getGameId());
 
 $output->writeln('Downloading metas');

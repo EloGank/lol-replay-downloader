@@ -1,5 +1,14 @@
 <?php
 
+/*
+ * This file is part of the "EloGank League of Legends Replay Downloader" package.
+ *
+ * https://github.com/EloGank/lol-replay-downloader
+ *
+ * For the full license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
 namespace Example\Utils;
 
 use EloGank\Replay\Output\OutputInterface;
@@ -41,7 +50,7 @@ class BasicOutput implements OutputInterface
     {
         if (is_array($messages)) {
             foreach ($messages as $message) {
-                echo $messages . PHP_EOL;
+                echo $message . PHP_EOL;
             }
         } else {
             echo $messages . PHP_EOL;
