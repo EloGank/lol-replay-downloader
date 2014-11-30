@@ -58,20 +58,24 @@ class ReplayDownloader
     }
 
     /**
-     * Download a replay asynchronously.
-     * This method require this dependency : https://github.com/EloGank/lol-replay-downloader-cli
+     * Download a replay.
      *
-     * @param string $region
-     * @param int    $gameId
-     * @param string $encryptionKey
-     * @param string $consolePath   The absolute path to the "console" file in the dependency folder
-     * @param bool   $isOverride    If the replay folder already exists, override it (causes loss of previous files !)
+     * If the asynchronous parameter is set to "true", make sure the CLI dependency is installed :
+     * @see https://github.com/EloGank/lol-replay-downloader-cli
+     *
+     * @param string               $region
+     * @param int                  $gameId
+     * @param string               $encryptionKey
+     * @param null|OutputInterface $output
+     * @param bool                 $isOverride    If the replay folder already exists, override it (causes loss of previous files !)
+     * @param bool                 $isAsync       True if the download will be in asynchronous mode, false otherwise
+     * @param string               $consolePath   The absolute path to the "console" file in the CLI dependency folder
      *
      * @return Replay
      *
      * @throws GameNotFoundException
      */
-    public function download($region, $gameId, $encryptionKey, $consolePath, $isOverride = false)
+    public function download($region, $gameId, $encryptionKey, OutputInterface $output = null, $isOverride = false, $isAsync = false, $consolePath = null)
     {
         // Check if exists
         if (!$this->client->isGameExists($region, $gameId)) {
@@ -88,13 +92,100 @@ class ReplayDownloader
             $this->createDirs($region, $gameId);
         }
 
-        if (!class_exists('\EloGank\Replay\Command\ReplayDownloadCommand')) {
-            throw new \RuntimeException('The dependency to run the async download is missing. Please, see : https://github.com/EloGank/lol-replay-downloader-cli');
+        if ($isAsync) {
+            // Check for the CLI dependency
+            if (!class_exists('\EloGank\Replay\Command\ReplayDownloadCommand')) {
+                throw new \RuntimeException('The dependency to run the async download is missing. Please, see : https://github.com/EloGank/lol-replay-downloader-cli');
+            }
+
+            $replayFolder = $this->getReplayDirPath($region, $gameId);
+
+            return pclose(popen(sprintf('%s %s/console elogank:replay:download %s %d %s --override > %s/info.log 2>&1 & echo $! > %s/pid', $this->options['php.executable_path'], $consolePath, $region, $gameId, $encryptionKey, $replayFolder, $replayFolder), 'r'));
         }
 
-        $replayFolder = $this->getReplayDirPath($region, $gameId);
+        return $this->doDownload($region, $gameId, $encryptionKey, $output);
+    }
 
-        return pclose(popen(sprintf('%s %s/console elogank:replay:download %s %d %s --override 2>&1 & echo $! > %s/pid', $this->options['php.executable_path'], $consolePath, $region, $gameId, $encryptionKey, $replayFolder, $replayFolder), 'r'));
+    /**
+     * @param string               $region
+     * @param int                  $gameId
+     * @param string               $encryptionKey
+     * @param null|OutputInterface $output
+     *
+     * @return ReplayInterface
+     *
+     * @throws GameEndedException
+     * @throws GameNotStartedException
+     */
+    protected function doDownload($region, $gameId, $encryptionKey, OutputInterface $output = null)
+    {
+        $hasOutput = null != $output;
+        $replay = $this->createReplay($region, $gameId, $encryptionKey);
+
+        // Download metas
+        $this->downloadMetas($replay, $output);
+
+        // Validate game criterias based on metas
+        $this->isValid($replay, $output);
+
+        // Retrieve last infos to download previous files
+        if ($hasOutput) {
+            $output->write("Retrieve last infos...\t\t\t");
+        }
+
+        $lastChunkInfo = $this->getLastChunkInfos($replay);
+        $replay->setLastChunkId($lastChunkInfo['chunkId']);
+        $replay->setLastKeyframeId($lastChunkInfo['keyFrameId']);
+
+        if ($hasOutput) {
+            $output->writeln('<info>OK</info>');
+        }
+
+        // Download previous chunks
+        if ($hasOutput) {
+            $output->write("Download all previous chunks (" . $replay->getLastChunkId() . ")...\t");
+        }
+
+        $this->downloadChunks($replay);
+
+        if ($hasOutput) {
+            $output->writeln('<info>OK</info>');
+        }
+
+        // Download previous keyframes
+        if ($hasOutput) {
+            $output->write("Download all previous keyframes (" . $replay->getLastKeyframeId() . ")...\t");
+        }
+
+        $this->downloadKeyframes($replay, $output);
+
+        if ($hasOutput) {
+            $output->writeln(array('<info>OK</info>', ''));
+        }
+
+        // Download current chunks & keyframes
+        if ($hasOutput) {
+            $output->writeln("Download current game data :");
+        }
+
+        $this->downloadCurrentData($replay, $output);
+
+        if ($hasOutput) {
+            $output->writeln('');
+        }
+
+        // Update metas
+        if ($hasOutput) {
+            $output->write("Update metas...\t\t\t\t");
+        }
+
+        $this->updateMetas($replay);
+
+        if ($hasOutput) {
+            $output->writeln('<info>OK</info>');
+        }
+
+        return $replay;
     }
 
     /**
@@ -152,8 +243,13 @@ class ReplayDownloader
      * @throws GameEndedException
      * @throws GameNotStartedException
      */
-    public function isValid(ReplayInterface $replay, OutputInterface $output, $tries = 0)
+    public function isValid(ReplayInterface $replay, OutputInterface $output = null, $tries = 0)
     {
+        $hasOutput = null != $output;
+        if ($hasOutput) {
+            $output->write("Validate game criterias...\t\t");
+        }
+
         if (null == $replay->getMetas()) {
             throw new \RuntimeException('You must call downloadMetas() method first');
         }
@@ -170,7 +266,7 @@ class ReplayDownloader
 
         // Retries
         if (1 < $size && !isset($metas['pendingAvailableKeyFrameInfo'][0])) {
-            if (0 === $tries) {
+            if ($hasOutput && 0 === $tries) {
                 $output->writeln('<comment>Game not started</comment>');
                 $output->write("Waiting for the ingame ~3rd minute...\t");
             }
@@ -182,15 +278,23 @@ class ReplayDownloader
                 return $this->isValid($replay, $tries);
             }
 
-            $output->write('<error>FAILURE</error>');
+            if ($hasOutput) {
+                $output->write('<error>FAILURE</error>');
+            }
 
             throw new GameNotStartedException('The game is not yet available for spectator, please wait tree minutes');
         }
 
         if (1 == $size && isset($metas['encryptionKey']) || $metas['gameEnded']) {
-            $output->write('<error>FAILURE</error>');
+            if ($hasOutput) {
+                $output->write('<error>FAILURE</error>');
+            }
 
             throw new GameEndedException('The game has already ended, cannot download it');
+        }
+
+        if ($hasOutput) {
+            $output->writeln('<info>OK</info>');
         }
 
         return true;
@@ -201,8 +305,13 @@ class ReplayDownloader
      *
      * @return array
      */
-    public function downloadMetas(ReplayInterface $replay)
+    public function downloadMetas(ReplayInterface $replay, OutputInterface $output = null)
     {
+        $hasOutput = null != $output;
+        if ($hasOutput) {
+            $output->write("Retrieve metas...\t\t\t");
+        }
+
         $gameId = $replay->getGameId();
         $metas = $this->client->getMetas($replay->getRegion(), $gameId);
 
@@ -210,6 +319,10 @@ class ReplayDownloader
         $metas = json_decode($metas, true);
         $metas['encryptionKey'] = $replay->getEncryptionKey();
         $replay->setMetas($metas);
+
+        if ($hasOutput) {
+            $output->writeln('<info>OK</info>');
+        }
 
         return $metas;
     }
@@ -419,8 +532,9 @@ class ReplayDownloader
      *
      * @return bool
      */
-    public function downloadCurrentData(ReplayInterface $replay, OutputInterface $output)
+    public function downloadCurrentData(ReplayInterface $replay, OutputInterface $output = null)
     {
+        $hasOutput = null != $output;
         $lastInfos = $this->getLastChunkInfos($replay, $replay->getLastChunkId());
 
         // End stats
@@ -429,17 +543,29 @@ class ReplayDownloader
         }
 
         $downloadableChunkId = $replay->getLastChunkId() + 1;
-        $output->write("Downloading chunk\t#" . $downloadableChunkId . "\t\t");
+        if ($hasOutput) {
+            $output->write("Downloading chunk\t#" . $downloadableChunkId . "\t\t");
+        }
+
         $this->downloadChunk($replay, $downloadableChunkId);
         $replay->setLastChunkId($downloadableChunkId);
-        $output->writeln('<info>OK</info>');
+
+        if ($hasOutput) {
+            $output->writeln('<info>OK</info>');
+        }
 
         if ($lastInfos['keyFrameId'] > $replay->getLastKeyframeId()) {
             $downloadableKeyframeId = $replay->getLastKeyframeId() + 1;
-            $output->write("Downloading keyframe\t#" . $downloadableKeyframeId . "\t\t");
+            if ($hasOutput) {
+                $output->write("Downloading keyframe\t#" . $downloadableKeyframeId . "\t\t");
+            }
+
             $this->downloadKeyframe($replay, $downloadableKeyframeId, $output);
             $replay->setLastKeyframeId($downloadableKeyframeId);
-            $output->writeln('<info>OK</info>');
+
+            if ($hasOutput) {
+                $output->writeln('<info>OK</info>');
+            }
         }
 
         // Downloading all chunks & keyframes might slow the current chunk
@@ -594,4 +720,4 @@ class ReplayDownloader
             'replay.download.retry'         => 15,
         ];
     }
-} 
+}

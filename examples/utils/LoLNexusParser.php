@@ -32,7 +32,7 @@ class LoLNexusParser
     /**
      * @var string
      */
-    protected $regionUniqueName;
+    protected $region;
 
     /**
      * @var int
@@ -53,7 +53,7 @@ class LoLNexusParser
     {
         $hasOutput = null != $output;
         if ($hasOutput) {
-            $output->write("Parsing homepage...\t\t");
+            $output->write("Parsing homepage...\t\t\t");
         }
 
         $buzz = new Browser();
@@ -64,8 +64,8 @@ class LoLNexusParser
         }
 
         if ($hasOutput) {
-            $output->writeln('OK');
-            $output->write("Parsing game page...\t\t");
+            $output->writeln('<info>OK</info>');
+            $output->write("Parsing game page...\t\t\t");
         }
 
         $response = $buzz->get('http://www.lolnexus.com/ajax/get-game-info/EUW.json?name=' . urlencode($matches[1]));
@@ -75,12 +75,12 @@ class LoLNexusParser
         }
 
         if ($hasOutput) {
-            $output->writeln('OK');
+            $output->writeln('<info>OK</info>');
         }
 
         $this->encryptionKey    = $matches[1];
         $this->gameId           = $matches[2];
-        $this->regionUniqueName = $matches[3];
+        $this->region = $matches[3];
     }
 
     /**
@@ -102,8 +102,8 @@ class LoLNexusParser
     /**
      * @return string
      */
-    public function getRegionUniqueName()
+    public function getRegion()
     {
-        return $this->regionUniqueName;
+        return $this->region;
     }
 }
