@@ -1,5 +1,5 @@
 League of Legends Replay Downloader
-===================================
+================================
 
 ## Composer installation
 
@@ -19,3 +19,16 @@ Then, run this command to install dependencies :
 ``` bash
 composer install
 ```
+
+### Install as dependency
+
+If you want install this library as dependency, simply add to your `composer.json` file :
+
+``` json
+"require": {
+    // ...
+    "elogank/lol-replay-downloader": "~1.0.0"
+}
+```
+
+Then, execute the `composer install` command.
