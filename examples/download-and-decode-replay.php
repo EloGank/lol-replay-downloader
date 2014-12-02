@@ -9,6 +9,11 @@
  * file that was distributed with this source code.
  */
 
+/*
+ * This example allows you to decode & save replay file in their folder (chunks.decoded & keyframes.decoded).
+ * These files can be parsed for a further feature.
+ */
+
 namespace Example;
 
 use EloGank\Replay\Client\ReplayClient;

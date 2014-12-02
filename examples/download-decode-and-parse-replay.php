@@ -9,6 +9,11 @@
  * file that was distributed with this source code.
  */
 
+/*
+ * This example allows you to call a method each time the ReplayDownloader decode a replay file (chunk or keyframe).
+ * In this particular example, it allows you to know how many turret has been destroyed by both teams.
+ */
+
 namespace Example;
 
 use EloGank\Replay\Client\ReplayClient;
@@ -119,12 +124,12 @@ class MyReplayDownloader extends ReplayDownloader
 }
 
 $replayDownloader = new MyReplayDownloader(new ReplayClient(), __DIR__ . '/replays', [
-    // ##################################################################
-    // Here, we tell to ReplayDownloader to decode and save decoded files
-    // into chunks.decoded & keyframes.decoded folders
-    // ##################################################################
+    // #####################################################################################
+    // Here, we tell to ReplayDownloader to decode but NOT save decoded files
+    // (save is useless and take disk space) into chunks.decoded & keyframes.decoded folders
+    // #####################################################################################
     'replay.decoder.enable'     => true,
-    'replay.decoder.save_files' => true
+    'replay.decoder.save_files' => false
 ]);
 $replayDownloader->download($parser->getRegion(), $parser->getGameId(), $parser->getEncryptionKey(), $output, true);
 

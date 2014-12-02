@@ -9,6 +9,10 @@
  * file that was distributed with this source code.
  */
 
+/*
+ * This example shows you how to use the Replay Downloader library.
+ */
+
 namespace Example;
 
 use EloGank\Replay\Client\ReplayClient;
