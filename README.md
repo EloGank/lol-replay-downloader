@@ -7,10 +7,10 @@ All download files can be decoded to parse them.
 ## Features
 
 * **A built-in replay decoder for each files (chunks & keyframes)**
-* **An asynchronous system, allow to download some replays at the same time and save the log into the replay folder**, it need the CLI dependency : https://github.com/EloGank/lol-replay-downloader-cli
+* **An asynchronous system, allow to download some replays at the same time and save the log into the replay folder**, it needs the CLI dependency : https://github.com/EloGank/lol-replay-downloader-cli
 * Download previous data if you start the download process after the start of the game
 * Can wait for the start of the game if you start the download process too early
-* Easily extendable and configurable.
+* **Easily extendable and configurable**.
 
 
 ## Installation
@@ -24,7 +24,7 @@ If you don't know what is Composer, read the [dedicated documentation](./doc/ins
 
 To configure the library, you have some `$options` parameters in the classes constructor. Just pass an array to override them, see the `getDefaultOptions()` method of each class.
 
-See the "[download and decode example](./examples/download-and-decode-replay.php)", which override two configurations of the `ReplayDownloader` class.
+See the "[download and decode example](./examples/download-and-decode-replay.php)", which overrides two configurations of the `ReplayDownloader` class.
 
 ## How to use (examples)
 
@@ -53,11 +53,11 @@ Example :
 "C:\Riot Games\League of Legends\RADS\solutions\lol_game_client_sln\releases\0.0.1.68\deploy\League of Legends.exe" "8394" "LoLLauncher.exe" "" "spectator 185.40.64.163:80 nwP+BEYqHgk4sElnU2uRogoxGPUw1dzE 1234567890 EUW1"
 ```
 
-So, you can run the command :
+So, you can extract :
 
-``` bash
-php console elogank:replay:download EUW1 1234567890 nwP+BEYqHgk4sElnU2uRogoxGPUw1dzE
-```
+Region | Game ID | Encryption Key
+------------ | ------------- | -------------
+EUW1 | 1234567890 | nwP+BEYqHgk4sElnU2uRogoxGPUw1dzE
 
 ### From LoLNexus parser
 

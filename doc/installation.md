@@ -24,7 +24,7 @@ composer install
 
 If you want install this library as dependency, simply add to your `composer.json` file :
 
-``` json
+``` js
 "require": {
     // ...
     "elogank/lol-replay-downloader": "~1.0.0"
