@@ -9,9 +9,11 @@
  * file that was distributed with this source code.
  */
 
-namespace EloGank\Replay\Exception;
+namespace EloGank\Replay\Downloader\Client\Exception;
+
+use EloGank\Replay\Exception\ReplayException;
 
 /**
  * @author Sylvain Lorinet <sylvain.lorinet@gmail.com>
  */
-class ReplayException extends \Exception { }
+class TimeoutException extends ReplayException { }

@@ -1,7 +1,7 @@
 {
    "name": "elogank/lol-replay-downloader",
    "description": "League of Legends replay downloader library",
-   "keywords": ["lol", "library", "league of legends", "replay", "match", "record", "spectator"],
+   "keywords": ["lol", "library", "league of legends", "replay", "match", "record", "spectator", "download"],
    "licence": "MIT",
    "authors": [
        {
@@ -11,6 +11,7 @@
     ],
     "require": {
         "php": ">=5.4.0",
+        "elogank/lol-replay": "1.0.*@dev",
         "kriswallsmith/buzz": "~0.13"
     },
     "extra": {

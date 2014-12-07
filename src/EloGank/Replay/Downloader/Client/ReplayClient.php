@@ -9,11 +9,11 @@
  * file that was distributed with this source code.
  */
 
-namespace EloGank\Replay\Client;
+namespace EloGank\Replay\Downloader\Client;
 
 use Buzz\Browser;
-use EloGank\Replay\Client\Exception\TimeoutException;
-use EloGank\Replay\Client\Exception\UnknownRegionException;
+use EloGank\Replay\Downloader\Client\Exception\TimeoutException;
+use EloGank\Replay\Downloader\Client\Exception\UnknownRegionException;
 
 /**
  * @author Sylvain Lorinet <sylvain.lorinet@gmail.com>

@@ -11,7 +11,7 @@
 
 namespace EloGank\Replay\Downloader;
 
-use EloGank\Replay\Client\ReplayClient;
+use EloGank\Replay\Downloader\Client\ReplayClient;
 use EloGank\Replay\Crypt\ReplayCrypt;
 use EloGank\Replay\Downloader\Exception\GameEndedException;
 use EloGank\Replay\Downloader\Exception\GameNotFoundException;

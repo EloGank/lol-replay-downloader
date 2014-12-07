@@ -9,7 +9,7 @@
  * file that was distributed with this source code.
  */
 
-namespace EloGank\Replay\Client\Exception;
+namespace EloGank\Replay\Downloader\Client\Exception;
 
 use EloGank\Replay\Exception\ReplayException;
 
