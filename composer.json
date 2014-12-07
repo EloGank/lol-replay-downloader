@@ -11,7 +11,7 @@
     ],
     "require": {
         "php": ">=5.4.0",
-        "elogank/lol-replay": "1.0.*@dev",
+        "elogank/lol-replay": "1.0.0",
         "kriswallsmith/buzz": "~0.13"
     },
     "extra": {
