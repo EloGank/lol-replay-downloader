@@ -171,9 +171,7 @@ class ReplayClient
      * @param string $region
      * @param int    $gameId
      *
-     * @return mixed
-     *
-     * @deprecated
+     * @return string
      */
     public function downloadEndStats($region, $gameId)
     {
@@ -184,6 +182,8 @@ class ReplayClient
             return false;
         }
 
+        // base64_decode to decode endStats file
+
         return $endStats->getContent();
     }
 
@@ -192,7 +192,13 @@ class ReplayClient
      */
     public function getObserverVersion()
     {
-        $version = $this->buzz->get($this->getUrl('EUW1') . self::URL_VERSION);
+        // version seems to be the same for all servers
+        try {
+            $version = $this->buzz->get($this->getUrl('EUW1') . self::URL_VERSION);
+        }
+        catch (TimeoutException $e) {
+            return false;
+        }
 
         return $version->getContent();
     }
