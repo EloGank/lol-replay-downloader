@@ -95,7 +95,7 @@ class LoLNexusParser
 
         $response = $buzz->get('http://www.lolnexus.com/ajax/get-game-info/' . self::$serverNames[$regionId - 1] . '.json?name=' . urlencode($playerName));
 
-        if (!preg_match('/lrf:\/\/spectator [0-9.:]+ (.*) ([0-9]+) ([A-Z0-9]+) [0-9\.]+/', $response->getContent(), $matches)) {
+        if (!preg_match('/lrf:\/\/spectator [0-9a-zA-Z.:]+ (.*) ([0-9]+) ([A-Z0-9]+) [0-9\.]+/', $response->getContent(), $matches)) {
             throw new \RuntimeException('Cannot parse LoL Nexus game page, the game may be ended (sometimes LoLNexus\'s cache is bad), please retry.');
         }
 
