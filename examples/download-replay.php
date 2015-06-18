@@ -15,7 +15,7 @@
 
 namespace Example;
 
-use EloGank\Replay\Client\ReplayClient;
+use EloGank\Replay\Downloader\Client\ReplayClient;
 use EloGank\Replay\Downloader\ReplayDownloader;
 use Example\Utils\BasicOutput;
 use Example\Utils\LoLNexusParser;
