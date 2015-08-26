@@ -1,16 +1,18 @@
 {
-   "name": "elogank/lol-replay-downloader",
-   "description": "League of Legends replay downloader library",
-   "keywords": ["lol", "library", "league of legends", "replay", "match", "record", "spectator", "download"],
-   "licence": "MIT",
-   "authors": [
-       {
-           "name": "Sylvain Lorinet",
-           "email": "sylvain.lorinet@gmail.com"
-       }
+    "name": "elogank/lol-replay-downloader",
+    "description": "League of Legends replay downloader library",
+    "keywords": ["lol", "library", "league of legends", "replay", "match", "record", "spectator", "download"],
+    "licence": "MIT",
+    "authors": [
+        {
+            "name": "Sylvain Lorinet",
+            "email": "sylvain.lorinet@gmail.com"
+        }
     ],
     "require": {
         "php": ">=5.4.0",
+        "ext-mcrypt": "*",
+        
         "elogank/lol-replay": "~1.0.0",
         "kriswallsmith/buzz": "~0.13"
     },
