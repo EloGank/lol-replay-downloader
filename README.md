@@ -7,7 +7,7 @@ All download files can be decoded to parse them.
 ## Features
 
 * **A built-in replay decoder for each files (chunks & keyframes)**.
-* **An asynchronous system *(mutli processes)*, allow to download some replays at the same time and save the log into the replay folder**, it needs the CLI dependency : https://github.com/EloGank/lol-replay-downloader-cli.
+* **An asynchronous system *(multi processes)*, allow to download some replays at the same time and save the log into the replay folder**, it needs the CLI dependency : https://github.com/EloGank/lol-replay-downloader-cli.
 * Download previous data if you start the download process after the start of the game (can download only 10 minutes in the past due to a limitation of the Riot spectator server engine).
 * Can wait for the start of the game if you start the download process too early (during the game loading process or the first 3 minutes of the game).
 * **Easily extendable and configurable**.
