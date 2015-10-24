@@ -26,6 +26,16 @@ To configure the library, you have some `$options` parameters in the classes con
 
 See the "[download and decode example](./examples/download-and-decode-replay.php)", which overrides two configurations of the `ReplayDownloader` class.
 
+### Notes with xDebug
+
+If you have enabled xDebug, please set your max nesting level to more than 200. This lib uses a recursive method to download a game data, and can reach the max value (100) when a game length is more than 40 minutes.  
+To edit the default max nesting level, open your xDebug configuration file (`/etc/php5/your_engine(cli, fpm or apache2)/conf.d/20-xdebug.ini` by default) and append this :
+
+``` ini
+[xdebug]
+xdebug.max_nesting_level = 300
+```
+
 ## How to use (examples)
 
 Some examples are available in the [examples repository folder](./examples).
