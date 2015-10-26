@@ -44,18 +44,13 @@ class ReplayClient
      */
     private $servers;
 
-    /**
-     * @var array
-     */
-    private $metasCache;
-
 
     /**
      * @param array $options
      */
     public function __construct(array $options = [])
     {
-        $this->options = array_merge($this->getDefaultOptions(), $options);
+        $this->options = array_merge(static::getDefaultConfigs(), $options);
 
         $buzzClassName = $this->options['buzz.class'];
         $this->buzz    = new $buzzClassName();
@@ -73,12 +68,7 @@ class ReplayClient
      */
     public function getMetas($region, $gameId)
     {
-        if (isset($this->metasCache) && null != $this->metasCache) {
-            $metas = $this->metasCache;
-        }
-        else {
-            $metas = $this->buzz->get(sprintf($this->getUrl($region) . self::URL_META, $region, $gameId));
-        }
+        $metas = $this->buzz->get(sprintf($this->getUrl($region) . self::URL_META, $region, $gameId));
 
         return $metas->getContent();
     }
@@ -97,8 +87,6 @@ class ReplayClient
         if ('HTTP/1.1 500 Internal Server Error' == $metas->getHeaders()[0]) {
             return false;
         }
-
-        $this->metasCache = $metas;
 
         return true;
     }
@@ -229,7 +217,7 @@ class ReplayClient
     /**
      * @return array
      */
-    protected function getDefaultOptions()
+    public static function getDefaultConfigs()
     {
         return [
             'buzz.class'   => '\Buzz\Browser',
