@@ -2,7 +2,7 @@
     "name": "elogank/lol-replay-downloader",
     "description": "League of Legends replay downloader library",
     "keywords": ["lol", "library", "league of legends", "replay", "match", "record", "spectator", "download"],
-    "licence": "MIT",
+    "license": "MIT",
     "authors": [
         {
             "name": "Sylvain Lorinet",
