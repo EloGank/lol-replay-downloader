@@ -275,7 +275,7 @@ class ReplayDownloader
                 sleep(30);
                 ++$tries;
 
-                return $this->isValid($replay, $tries);
+                return $this->isValid($replay, $output, $tries);
             }
 
             if ($hasOutput) {
