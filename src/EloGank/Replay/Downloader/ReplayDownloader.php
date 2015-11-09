@@ -538,7 +538,7 @@ class ReplayDownloader
         $lastInfos = $this->getLastChunkInfos($replay, $replay->getLastChunkId());
 
         // End stats
-        if ($lastInfos['endGameChunkId'] == $replay->getLastChunkId()) {
+        if ($lastInfos['endGameChunkId'] >= $replay->getLastChunkId()) {
             return true;
         }
 
