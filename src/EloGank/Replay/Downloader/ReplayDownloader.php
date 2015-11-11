@@ -11,7 +11,6 @@
 
 namespace EloGank\Replay\Downloader;
 
-use EloGank\Replay\Downloader\Client\Exception\TimeoutException;
 use EloGank\Replay\Downloader\Client\ReplayClient;
 use EloGank\Replay\Crypt\ReplayCrypt;
 use EloGank\Replay\Downloader\Exception\GameEndedException;
@@ -62,13 +61,15 @@ class ReplayDownloader
      * Download a replay.
      *
      * If the asynchronous parameter is set to "true", make sure the CLI dependency is installed :
+     *
      * @see https://github.com/EloGank/lol-replay-downloader-cli
      *
      * @param string               $region
      * @param int                  $gameId
      * @param string               $encryptionKey
      * @param null|OutputInterface $output
-     * @param bool                 $isOverride    If the replay folder already exists, override it (causes loss of previous files !)
+     * @param bool                 $isOverride    If the replay folder already exists, override it
+     *                                            (causes loss of previous files !)
      * @param bool                 $isAsync       True if the download will be in asynchronous mode, false otherwise
      * @param string               $consolePath   The absolute path to the "console" file in the CLI dependency folder
      *
@@ -76,8 +77,15 @@ class ReplayDownloader
      *
      * @throws GameNotFoundException
      */
-    public function download($region, $gameId, $encryptionKey, OutputInterface $output = null, $isOverride = false, $isAsync = false, $consolePath = null)
-    {
+    public function download(
+        $region,
+        $gameId,
+        $encryptionKey,
+        OutputInterface $output = null,
+        $isOverride = false,
+        $isAsync = false,
+        $consolePath = null
+    ) {
         // Check if exists
         if (!$this->client->isGameExists($region, $gameId)) {
             throw new GameNotFoundException('The game #' . $gameId . ' is not found');
@@ -95,12 +103,28 @@ class ReplayDownloader
         if ($isAsync) {
             // Check for the CLI dependency
             if (!class_exists('\EloGank\Replay\Command\ReplayDownloadCommand')) {
-                throw new \RuntimeException('The dependency to run the async download is missing. Please, see : https://github.com/EloGank/lol-replay-downloader-cli');
+                throw new \RuntimeException(
+                    'The dependency to run the async download is missing. '
+                    . 'Please, see : https://github.com/EloGank/lol-replay-downloader-cli'
+                );
             }
 
             $replayFolder = $this->getReplayDirPath($region, $gameId);
 
-            return pclose(popen(sprintf('%s %s/console elogank:replay:download %s %d %s --override > %s/info.log 2>&1 & echo $! > %s/pid', $this->options['php.executable_path'], $consolePath, $region, $gameId, $encryptionKey, $replayFolder, $replayFolder), 'r'));
+            return pclose(
+                popen(
+                    sprintf(
+                        '%s %s/console elogank:replay:download %s %d %s --override > %s/info.log 2>&1 & echo $! > %s/pid',
+                        $this->options['php.executable_path'],
+                        $consolePath,
+                        $region,
+                        $gameId,
+                        $encryptionKey,
+                        $replayFolder,
+                        $replayFolder
+                    ), 'r'
+                )
+            );
         }
 
         return $this->doDownload($region, $gameId, $encryptionKey, $output);
@@ -157,7 +181,7 @@ class ReplayDownloader
             $output->write("Download all previous keyframes (" . $replay->getLastKeyframeId() . ")...\t");
         }
 
-        $this->downloadKeyframes($replay, $output);
+        $this->downloadKeyframes($replay);
 
         if ($hasOutput) {
             $output->writeln(array('<info>OK</info>', ''));
@@ -201,7 +225,10 @@ class ReplayDownloader
         $replay = new $className($region, $gameId, $encryptionKey);
 
         if (!$replay instanceof ReplayInterface) {
-            throw new \RuntimeException('The class ' . $className . ' is not a valid class. It should implement \EloGank\Replay\ReplayInterface');
+            throw new \RuntimeException(
+                'The class ' . $className . ' is not a valid class. '
+                . 'It should implement \EloGank\Replay\ReplayInterface'
+            );
         }
 
         return $replay;
@@ -302,6 +329,7 @@ class ReplayDownloader
 
     /**
      * @param ReplayInterface $replay
+     * @param OutputInterface $output
      *
      * @return array
      */
@@ -334,7 +362,10 @@ class ReplayDownloader
     public function saveMetas(ReplayInterface $replay)
     {
         // Save the file
-        file_put_contents($this->getReplayDirPath($replay->getRegion(), $replay->getGameId()) . '/metas.json', json_encode($replay->getMetas()));
+        file_put_contents(
+            $this->getReplayDirPath($replay->getRegion(), $replay->getGameId()) . '/metas.json',
+            json_encode($replay->getMetas())
+        );
     }
 
     /**
@@ -348,7 +379,10 @@ class ReplayDownloader
      */
     public function getLastChunkInfos(ReplayInterface $replay, $chunkId = 30000, $tries = 0)
     {
-        $lastInfos = json_decode($this->client->getLastChunkInfo($replay->getRegion(), $replay->getGameId(), $chunkId), true);
+        $lastInfos = json_decode(
+            $this->client->getLastChunkInfo($replay->getRegion(), $replay->getGameId(), $chunkId),
+            true
+        );
 
         if (false === $lastInfos || !isset($lastInfos['chunkId']) || 0 === $lastInfos['chunkId']) {
             if (false === $lastInfos || !isset($lastInfos['chunkId'])) {
@@ -394,9 +428,8 @@ class ReplayDownloader
 
     /**
      * @param ReplayInterface $replay
-     * @param OutputInterface $output
      */
-    public function downloadKeyframes(ReplayInterface $replay, OutputInterface $output)
+    public function downloadKeyframes(ReplayInterface $replay)
     {
         // Clear last keyframes info
         $metas = $replay->getMetas();
@@ -421,7 +454,10 @@ class ReplayDownloader
 
         if (false === $chunk) {
             try {
-                if ($chunkId > $this->findFirstChunkId($replay->getMetas()) && isset($replay->getMetas()['pendingAvailableChunkInfo'][0])) {
+                if (
+                    $chunkId > $this->findFirstChunkId($replay->getMetas())
+                    && isset($replay->getMetas()['pendingAvailableChunkInfo'][0])
+                ) {
                     $replay->addDownloadRetry();
 
                     if ($this->options['replay.download.retry'] == $replay->getDownloadRetry()) {
@@ -484,8 +520,13 @@ class ReplayDownloader
 
         if (false === $keyframe) {
             try {
-                if ($keyframeId > $this->findKeyframeByChunkId($replay->getMetas(), $this->findFirstChunkId($replay->getMetas())) &&
-                    isset($replay->getMetas()['pendingAvailableKeyFrameInfo'][0])) {
+                if (
+                    $keyframeId > $this->findKeyframeByChunkId(
+                        $replay->getMetas(),
+                        $this->findFirstChunkId($replay->getMetas()
+                    ))
+                    && isset($replay->getMetas()['pendingAvailableKeyFrameInfo'][0])
+                ) {
                     $replay->addDownloadRetry();
 
                     if ($this->options['replay.download.retry'] == $replay->getDownloadRetry()) {
@@ -595,7 +636,10 @@ class ReplayDownloader
         }
 
         // Downloading all chunks & keyframes might slow the current chunk
-        if ($lastInfos['chunkId'] > $replay->getLastChunkId() || $lastInfos['keyFrameId'] > $replay->getLastKeyframeId()) {
+        if (
+            $lastInfos['chunkId'] > $replay->getLastChunkId()
+            || $lastInfos['keyFrameId'] > $replay->getLastKeyframeId()
+        ) {
             return $this->downloadCurrentData($replay, $output);
         }
 
@@ -730,7 +774,15 @@ class ReplayDownloader
     {
         $stringGameId = (string) $gameId;
 
-        return sprintf('%s/%s/%s/%s/%s/%d', $this->path, $region, $stringGameId[0] . $stringGameId[1], $stringGameId[2], $stringGameId[3], $gameId);
+        return sprintf(
+            '%s/%s/%s/%s/%s/%d',
+            $this->path,
+            $region,
+            $stringGameId[0] . $stringGameId[1],
+            $stringGameId[2],
+            $stringGameId[3],
+            $gameId
+        );
     }
 
     /**

@@ -102,7 +102,12 @@ class ReplayClient
     public function getLastChunkInfo($region, $gameId, $chunkId)
     {
         try {
-            $chunkInfo = $this->buzz->get(sprintf($this->getUrl($region) . self::URL_CHUNK_INFO, $region, $gameId, $chunkId));
+            $chunkInfo = $this->buzz->get(sprintf(
+                $this->getUrl($region) . self::URL_CHUNK_INFO,
+                $region,
+                $gameId,
+                $chunkId
+            ));
         } catch (TimeoutException $e) {
             return false;
         } catch (RequestException $e) {
@@ -122,7 +127,12 @@ class ReplayClient
     public function downloadChunk($region, $gameId, $chunkId)
     {
         try {
-            $chunk = $this->buzz->get(sprintf($this->getUrl($region) . self::URL_CHUNK_DOWNLOAD, $region, $gameId, $chunkId));
+            $chunk = $this->buzz->get(sprintf(
+                $this->getUrl($region) . self::URL_CHUNK_DOWNLOAD,
+                $region,
+                $gameId,
+                $chunkId
+            ));
         } catch (TimeoutException $e) {
             return false;
         } catch (RequestException $e) {
@@ -149,7 +159,12 @@ class ReplayClient
     public function downloadKeyframe($region, $gameId, $keyframeId)
     {
         try {
-            $keyframe = $this->buzz->get(sprintf($this->getUrl($region) . self::URL_KEYFRAME_DOWNLOAD, $region, $gameId, $keyframeId));
+            $keyframe = $this->buzz->get(sprintf(
+                $this->getUrl($region) . self::URL_KEYFRAME_DOWNLOAD,
+                $region,
+                $gameId,
+                $keyframeId
+            ));
         } catch (TimeoutException $e) {
             return false;
         } catch (RequestException $e) {
@@ -221,7 +236,9 @@ class ReplayClient
 
             $availableRegions = substr($availableRegions, 0, -2);
 
-            throw new UnknownRegionException('The region "' . $region . '" is unknown. Available regions : ' . $availableRegions);
+            throw new UnknownRegionException(
+                'The region "' . $region . '" is unknown. Available regions : ' . $availableRegions
+            );
         }
 
         return $this->servers[$region] . self::URL_PREFIX;
