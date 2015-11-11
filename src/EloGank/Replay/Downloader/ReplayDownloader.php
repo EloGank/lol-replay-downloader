@@ -705,8 +705,12 @@ class ReplayDownloader
         // 55-54-53-51-50, will return 53 because 52 is missing
         // 55-54-53, will return 53
         foreach ($chunks as $i => $chunk) {
-            if (isset($chunks[$i + 1]) && $chunks[$i + 1]['id'] == $chunk['id'] - 1 ||
-                !isset($chunks[$i + 1]) && $chunkId - 1 == $chunk['id']) {
+            if (
+                isset($chunks[$i + 1])
+                && $chunks[$i + 1]['id'] == $chunk['id'] - 1
+                || !isset($chunks[$i + 1])
+                && $chunkId - 1 == $chunk['id']
+            ) {
                 $chunkId = $chunk['id'];
             } else {
                 break;
