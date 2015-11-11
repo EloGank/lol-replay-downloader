@@ -12,6 +12,7 @@
 namespace EloGank\Replay\Downloader\Client;
 
 use Buzz\Browser;
+use Buzz\Exception\RequestException;
 use EloGank\Replay\Downloader\Client\Exception\TimeoutException;
 use EloGank\Replay\Downloader\Client\Exception\UnknownRegionException;
 
@@ -96,11 +97,17 @@ class ReplayClient
      * @param int    $gameId
      * @param int    $chunkId
      *
-     * @return string
+     * @return string|bool
      */
     public function getLastChunkInfo($region, $gameId, $chunkId)
     {
-        $chunkInfo = $this->buzz->get(sprintf($this->getUrl($region) . self::URL_CHUNK_INFO, $region, $gameId, $chunkId));
+        try {
+            $chunkInfo = $this->buzz->get(sprintf($this->getUrl($region) . self::URL_CHUNK_INFO, $region, $gameId, $chunkId));
+        } catch (TimeoutException $e) {
+            return false;
+        } catch (RequestException $e) {
+            return false;
+        }
 
         return $chunkInfo->getContent();
     }
@@ -116,13 +123,15 @@ class ReplayClient
     {
         try {
             $chunk = $this->buzz->get(sprintf($this->getUrl($region) . self::URL_CHUNK_DOWNLOAD, $region, $gameId, $chunkId));
-        }
-        catch (TimeoutException $e) {
+        } catch (TimeoutException $e) {
+            return false;
+        } catch (RequestException $e) {
             return false;
         }
 
         // Check if game exists
         $header = $chunk->getHeaders()[0];
+
         if ('HTTP/1.1 500 Internal Server Error' == $header || 'HTTP/1.1 404 Not Found' == $header) {
             return false;
         }
@@ -141,8 +150,9 @@ class ReplayClient
     {
         try {
             $keyframe = $this->buzz->get(sprintf($this->getUrl($region) . self::URL_KEYFRAME_DOWNLOAD, $region, $gameId, $keyframeId));
-        }
-        catch (TimeoutException $e) {
+        } catch (TimeoutException $e) {
+            return false;
+        } catch (RequestException $e) {
             return false;
         }
 
@@ -165,8 +175,9 @@ class ReplayClient
     {
         try {
             $endStats = $this->buzz->get(sprintf($this->getUrl($region) . self::URL_ENDSTATS, $region, $gameId));
-        }
-        catch (TimeoutException $e) {
+        } catch (TimeoutException $e) {
+            return false;
+        } catch (RequestException $e) {
             return false;
         }
 
@@ -183,8 +194,9 @@ class ReplayClient
         // version seems to be the same for all servers
         try {
             $version = $this->buzz->get($this->getUrl('EUW1') . self::URL_VERSION);
-        }
-        catch (TimeoutException $e) {
+        } catch (TimeoutException $e) {
+            return false;
+        } catch (RequestException $e) {
             return false;
         }
 
@@ -202,6 +214,7 @@ class ReplayClient
     {
         if (!isset($this->servers[$region])) {
             $availableRegions = '';
+
             foreach ($this->servers as $key => $item) {
                 $availableRegions .= $key . ', ';
             }

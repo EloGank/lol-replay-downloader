@@ -11,6 +11,7 @@
 
 namespace EloGank\Replay\Downloader;
 
+use EloGank\Replay\Downloader\Client\Exception\TimeoutException;
 use EloGank\Replay\Downloader\Client\ReplayClient;
 use EloGank\Replay\Crypt\ReplayCrypt;
 use EloGank\Replay\Downloader\Exception\GameEndedException;
@@ -87,8 +88,7 @@ class ReplayDownloader
             if (!is_dir($this->getReplayDirPath($region, $gameId))) {
                 $this->createDirs($region, $gameId);
             }
-        }
-        else {
+        } else {
             $this->createDirs($region, $gameId);
         }
 
@@ -246,6 +246,7 @@ class ReplayDownloader
     public function isValid(ReplayInterface $replay, OutputInterface $output = null, $tries = 0)
     {
         $hasOutput = null != $output;
+
         if ($hasOutput) {
             $output->write("Validate game criterias...\t\t");
         }
@@ -257,8 +258,7 @@ class ReplayDownloader
         // Download the new available metas to validate the game, only if retry
         if (0 < $tries) {
             $metas = $this->downloadMetas($replay);
-        }
-        else {
+        } else {
             $metas = $replay->getMetas();
         }
 
@@ -308,6 +308,7 @@ class ReplayDownloader
     public function downloadMetas(ReplayInterface $replay, OutputInterface $output = null)
     {
         $hasOutput = null != $output;
+
         if ($hasOutput) {
             $output->write("Retrieve metas...\t\t\t");
         }
@@ -348,15 +349,29 @@ class ReplayDownloader
     public function getLastChunkInfos(ReplayInterface $replay, $chunkId = 30000, $tries = 0)
     {
         $lastInfos = json_decode($this->client->getLastChunkInfo($replay->getRegion(), $replay->getGameId(), $chunkId), true);
-        if (0 === $lastInfos['chunkId']) {
-            if ($tries > 10) {
-                throw new GameNotStartedException('The game is not started');
+
+        if (false === $lastInfos || !isset($lastInfos['chunkId']) || 0 === $lastInfos['chunkId']) {
+            if (false === $lastInfos || !isset($lastInfos['chunkId'])) {
+                $replay->addDownloadRetry();
+
+                if ($this->options['replay.download.retry'] == $replay->getDownloadRetry()) {
+                    return false;
+                }
+            } elseif (0 === $lastInfos['chunkId']) {
+                if ($tries > 10) {
+                    throw new GameNotStartedException('The game is not started');
+                }
+
+                sleep(29); // 29 + 1 below
             }
 
-            sleep(30);
+            sleep(1);
 
             return $this->getLastChunkInfos($replay, $chunkId, $tries + 1);
         }
+
+        // Clear retries
+        $replay->resetDownloadRetry();
 
         return $lastInfos;
     }
@@ -389,7 +404,7 @@ class ReplayDownloader
         $replay->setMetas($metas);
 
         for ($i=1; $i<=$replay->getLastKeyframeId(); $i++) {
-            $this->downloadKeyframe($replay, $i, $output);
+            $this->downloadKeyframe($replay, $i);
         }
     }
 
@@ -403,21 +418,21 @@ class ReplayDownloader
     private function downloadChunk(ReplayInterface $replay, $chunkId)
     {
         $chunk = $this->client->downloadChunk($replay->getRegion(), $replay->getGameId(), $chunkId);
+
         if (false === $chunk) {
             try {
                 if ($chunkId > $this->findFirstChunkId($replay->getMetas()) && isset($replay->getMetas()['pendingAvailableChunkInfo'][0])) {
                     $replay->addDownloadRetry();
+
                     if ($this->options['replay.download.retry'] == $replay->getDownloadRetry()) {
                         return false;
-                    }
-                    else {
+                    } else {
                         sleep(1);
 
                         return $this->downloadChunk($replay, $chunkId);
                     }
                 }
-            }
-            catch (\RuntimeException $e) {
+            } catch (\RuntimeException $e) {
                 // No first chunk id was created, so it's the first download : we do nothing
             }
 
@@ -442,9 +457,14 @@ class ReplayDownloader
         if ($this->options['replay.decoder.enable']) {
             $crypt = new ReplayCrypt($replay);
 
-            if (!$this->onReplayFileDecrypted($replay, self::FILETYPE_CHUNK, $chunkId,
-                $crypt->getBinary($replay, $pathFolder, $chunkId, $this->options['replay.decoder.save_files'])
-            )) {
+            if (
+                !$this->onReplayFileDecrypted(
+                    $replay,
+                    self::FILETYPE_CHUNK,
+                    $chunkId,
+                    $crypt->getBinary($replay, $pathFolder, $chunkId, $this->options['replay.decoder.save_files'])
+                )
+            ) {
                 return false;
             }
         }
@@ -461,22 +481,22 @@ class ReplayDownloader
     private function downloadKeyframe(ReplayInterface $replay, $keyframeId)
     {
         $keyframe = $this->client->downloadKeyframe($replay->getRegion(), $replay->getGameId(), $keyframeId);
+
         if (false === $keyframe) {
             try {
                 if ($keyframeId > $this->findKeyframeByChunkId($replay->getMetas(), $this->findFirstChunkId($replay->getMetas())) &&
                     isset($replay->getMetas()['pendingAvailableKeyFrameInfo'][0])) {
                     $replay->addDownloadRetry();
+
                     if ($this->options['replay.download.retry'] == $replay->getDownloadRetry()) {
                         return false;
-                    }
-                    else {
+                    } else {
                         sleep(1);
 
                         return $this->downloadChunk($replay, $keyframeId);
                     }
                 }
-            }
-            catch (\RuntimeException $e) {
+            } catch (\RuntimeException $e) {
                 // No first chunk id was created, so it's the first download : we do nothing
             }
 
@@ -496,14 +516,20 @@ class ReplayDownloader
             'receivedTime' => date('M n, Y g:i:s A'),
             'nextChunkId'  => ($keyframeId - 1) * 2 + $metas['startGameChunkId'],
         );
+
         $replay->setMetas($metas);
 
         if ($this->options['replay.decoder.enable']) {
             $crypt = new ReplayCrypt($replay);
 
-            if (!$this->onReplayFileDecrypted($replay, self::FILETYPE_KEYFRAME, $keyframeId,
-                $crypt->getBinary($replay, $pathFolder, $keyframeId, $this->options['replay.decoder.save_files'])
-            )) {
+            if (
+                !$this->onReplayFileDecrypted(
+                    $replay,
+                    self::FILETYPE_KEYFRAME,
+                    $keyframeId,
+                    $crypt->getBinary($replay, $pathFolder, $keyframeId, $this->options['replay.decoder.save_files'])
+                )
+            ) {
                 return false;
             }
         }
@@ -560,7 +586,7 @@ class ReplayDownloader
                 $output->write("Downloading keyframe\t#" . $downloadableKeyframeId . "\t\t");
             }
 
-            $this->downloadKeyframe($replay, $downloadableKeyframeId, $output);
+            $this->downloadKeyframe($replay, $downloadableKeyframeId);
             $replay->setLastKeyframeId($downloadableKeyframeId);
 
             if ($hasOutput) {
@@ -622,6 +648,7 @@ class ReplayDownloader
         // Deleting startup chunks
         $finalChunks = array();
         $startGameChunkId = $metas['startGameChunkId'];
+
         foreach ($metas['pendingAvailableChunkInfo'] as $chunk) {
             if ($chunk['id'] >= $startGameChunkId) {
                 $finalChunks[] = $chunk;
@@ -637,8 +664,7 @@ class ReplayDownloader
             if (isset($chunks[$i + 1]) && $chunks[$i + 1]['id'] == $chunk['id'] - 1 ||
                 !isset($chunks[$i + 1]) && $chunkId - 1 == $chunk['id']) {
                 $chunkId = $chunk['id'];
-            }
-            else {
+            } else {
                 break;
             }
         }
@@ -650,10 +676,10 @@ class ReplayDownloader
         // If no keyframe available for selected chunk
         if ($chunkId < $metas['pendingAvailableKeyFrameInfo'][0]['nextChunkId']) {
             $chunkId = $metas['pendingAvailableKeyFrameInfo'][0]['nextChunkId'];
-        }
-        else {
+        } else {
             // If chunk is in the middle of keyframe (we take the next chunk)
             $found = false;
+
             foreach ($metas['pendingAvailableKeyFrameInfo'] as $keyframe) {
                 if ($keyframe['nextChunkId'] == $chunkId) {
                     $found = true;
